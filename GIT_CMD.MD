@@ -43,5 +43,5 @@ git commit -m "COMMIT_TYPE: COMMIT_MESSAGE"
 
 * Command to push to a particular branch
 ```
-git push origin HEAD:fbref_match
+git push origin fbref_match
 ```
