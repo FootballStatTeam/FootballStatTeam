@@ -1,0 +1,97 @@
+version: "3.7"
+
+volumes:
+  shared-workspace:
+    name: "hdfs"
+    driver: local
+
+services:
+  jupyterlab:
+    build: ./jupyter
+    container_name: jupyerlab
+    ports:
+      - 8888:8888
+    volumes:
+      - shared-workspace:/opt/workspace
+    
+  spark-master:
+    build: ./spark/master
+    container_name: spark-master
+    ports:
+      - 8080:8080
+      - 7077:7077
+    volumes:
+      - shared-workspace:/opt/workspace
+
+  spark-worker-1:
+    build: ./spark/worker
+    container_name: spark-worker-1
+    environment: 
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=2g
+    ports:
+      - 8081:8081
+    volumes:
+      - shared-workspace:/opt/workspace
+    depends_on:
+      - spark-master
+
+  spark-worker-2:
+    build: ./spark/worker
+    container_name: spark-worker-2
+    environment: 
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=2g
+    ports:
+      - 8082:8081
+    volumes:
+      - shared-workspace:/opt/workspace
+    depends_on:
+      - spark-master
+
+  namenode:
+    image: bde2020/hadoop-namenode:1.1.0-hadoop2.8-java8
+    container_name: hdfs-namenode-spark
+    volumes:
+      - ./data/namenode:/hadoop/dfs/name
+    environment:
+      CLUSTER_NAME: hdfs-demo
+    env_file:
+      - ./hadoop.env
+    ports:
+      - 50070:50070
+
+  datanode:
+    image: bde2020/hadoop-datanode:1.1.0-hadoop2.8-java8
+    container_name: hdfs-datanode-spark
+    volumes:
+      - ./data/datanode:/hadoop/dfs/data
+    environment:
+      CLUSTER_NAME: hdfs-demo
+    env_file:
+      - ./hadoop.env
+    ports:
+      - 50075:50075
+
+  hue:
+    image: bde2020/hdfs-filebrowser
+    ports:
+      - 8088:8088
+    environment:
+      - NAMENODE_HOST=namenode
+
+  mongo:
+    image: mongo
+    ports:
+      - 27017:27017
+  
+  mongo-ui:
+    image: mongo-express
+    ports:
+      - 8000:8081
+    depends_on:
+      - mongo
